@@ -1,58 +1,59 @@
 import os
 from flask import Flask
 from threading import Thread
+from openai import OpenAI
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
+
+# Configuration
+TOKEN = "8829581045:AAFlpGC-6fPS0UTRZSbAz1ToPz4QusMxiOc"
+client = OpenAI(api_key="YOUR_OPENAI_API_KEY") # ဤနေရာတွင် သင့် API Key ထည့်ပါ
 
 app = Flask(__name__)
 @app.route('/')
 def home():
-    return "Bot is active!"
+    return "Bot is running 24/7!"
 
 def run_web():
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)))
 
-# ခလုတ်များ တည်ဆောက်ခြင်း
-def get_main_keyboard():
-    keyboard = [['/weather', '/info'], ['/help']]
-    return ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+# Keyboard Layout
+def get_keyboard():
+    return ReplyKeyboardMarkup([['/weather', '/info'], ['/help']], resize_keyboard=True)
 
 # Commands
 async def start(update, context):
-    await update.message.reply_text(
-        'မင်္ဂလာပါ! ကျွန်တော်က သင်နဲ့အတူ တွဲလုပ်မယ့် အဆင့်မြင့် Bot ပါ။ အောက်ပါခလုတ်များကို သုံးနိုင်ပါတယ်။',
-        reply_markup=get_main_keyboard()
-    )
+    await update.message.reply_text("မင်္ဂလာပါ! ကျွန်တော်က သင်၏ စမတ်ကျသော AI Assistant ပါ။", reply_markup=get_keyboard())
 
 async def weather(update, context):
-    await update.message.reply_text('ရန်ကုန်မြို့တွင် အပူချိန် ၃၂ ဒီဂရီစင်တီဂရိတ် ရှိပါတယ်။')
+    await update.message.reply_text('ယခုအချိန် ရန်ကုန်မြို့တွင် အပူချိန် ၃၂ ဒီဂရီစင်တီဂရိတ် ရှိပါသည်။')
 
 async def info(update, context):
     user = update.effective_user
-    await update.message.reply_text(f'သင့်အချက်အလက်:\nနာမည်: {user.first_name}\nID: {user.id}')
+    await update.message.reply_text(f'👤 အချက်အလက်\nနာမည်: {user.first_name}\nID: {user.id}')
 
-async def help_cmd(update, context):
-    await update.message.reply_text('ကျွန်တော်က သင့်ကို ရာသီဥတုစစ်ပေးခြင်း၊ သင့်အချက်အလက်ပြခြင်းများ လုပ်ပေးနိုင်ပါတယ်။')
-
-async def echo(update, context):
-    text = update.message.text
-    await update.message.reply_text(f'သင်ပြောတာကို ကျွန်တော် နားထောင်နေပါတယ်: "{text}"')
+# AI Chat Function
+async def chat_with_ai(update, context):
+    try:
+        user_text = update.message.text
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[{"role": "user", "content": user_text}]
+        )
+        await update.message.reply_text(response.choices[0].message.content)
+    except Exception as e:
+        await update.message.reply_text("ဆောရီး! AI စနစ် အလုပ်မလုပ်သေးပါ (API Key စစ်ဆေးပါ)။")
 
 if __name__ == '__main__':
-    # Web server
     t = Thread(target=run_web)
     t.start()
     
-    TOKEN = "8829581045:AAFlpGC-6fPS0UTRZSbAz1ToPz4QusMxiOc"
-    
     app_bot = ApplicationBuilder().token(TOKEN).build()
     
-    # Handlers
     app_bot.add_handler(CommandHandler("start", start))
     app_bot.add_handler(CommandHandler("weather", weather))
     app_bot.add_handler(CommandHandler("info", info))
-    app_bot.add_handler(CommandHandler("help", help_cmd))
-    app_bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, echo))
+    app_bot.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat_with_ai))
     
     app_bot.run_polling()
     
