@@ -6,7 +6,7 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 # Logging စနစ်
 logging.basicConfig(level=logging.INFO)
 
-# Main Menu ခလုတ်များဖွဲ့စည်းပုံ
+# Main Menu ခလုတ်များ
 def get_main_menu():
     keyboard = [
         [InlineKeyboardButton("🌟 ရွှေဈေး", callback_data='gold'), InlineKeyboardButton("🇺🇸 ဒေါ်လာဈေး", callback_data='usd')],
@@ -16,11 +16,9 @@ def get_main_menu():
     ]
     return InlineKeyboardMarkup(keyboard)
 
-# Start Command
 async def start(update: Update, context):
     await update.message.reply_text("👋 မင်္ဂလာပါ! ကျွန်တော်က အများသုံး Helper Bot ပါ။ အောက်ပါ Menu များမှ ရွေးချယ်နိုင်ပါသည်။", reply_markup=get_main_menu())
 
-# ခလုတ်နှိပ်သည့်အခါ လုပ်ဆောင်ချက်များ
 async def button_click(update: Update, context):
     query = update.callback_query
     await query.answer()
@@ -62,9 +60,9 @@ async def qr_gen(update, context):
         await update.message.reply_photo(photo=open('qr.png', 'rb'))
     except: await update.message.reply_text("အသုံးပြုပုံ: /qr [စာသား]")
 
-# Bot စတင်ခြင်း
 if __name__ == '__main__':
-    TOKEN = "8829581045:AAFlpGC-6fPS0UTRZSbAz1ToPz4QusMxiOc"
+    # Token အသစ်ကို ဒီနေရာမှာ ထည့်ပေးထားပါတယ်
+    TOKEN = "8979386653:AAGSvR5bYIzixafDXsmVNFVZ93uNa0o-xRs"
     app_bot = ApplicationBuilder().token(TOKEN).build()
     
     app_bot.add_handler(CommandHandler("start", start))
@@ -76,4 +74,3 @@ if __name__ == '__main__':
     
     print("Bot စတင်လည်ပတ်နေပါပြီ...")
     app_bot.run_polling()
-    
