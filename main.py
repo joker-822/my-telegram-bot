@@ -13,11 +13,19 @@ def get_main_menu():
         [InlineKeyboardButton("🔗 လင့်ခ်အတို", callback_data='short_help'), InlineKeyboardButton("🔐 Password", callback_data='pass_help')],
         [InlineKeyboardButton("⏰ အချိန်/ရက်စွဲ", callback_data='info'), InlineKeyboardButton("🖼 QR Code", callback_data='qr_help')],
         [InlineKeyboardButton("🔮 နေ့စဉ်ဗေဒင်", callback_data='fortune'), InlineKeyboardButton("🍎 ကျန်းမာရေး", callback_data='health')],
-        [InlineKeyboardButton("👤 Admin ဆက်သွယ်ရန်", callback_data='admin')]
+        [InlineKeyboardButton("📊 Bot Stats", callback_data='stats'), InlineKeyboardButton("👤 Admin ဆက်သွယ်ရန်", callback_data='admin')]
     ]
     return InlineKeyboardMarkup(keyboard)
 
 async def start(update: Update, context):
+    user_id = str(update.message.from_user.id)
+    if not os.path.exists('users.txt'):
+        with open('users.txt', 'w') as f: f.write("")
+    with open('users.txt', 'r+') as f:
+        content = f.read()
+        if user_id not in content:
+            f.write(user_id + "\n")
+            
     await update.message.reply_text("👋 မင်္ဂလာပါ! ကျွန်တော်က အများသုံး Helper Bot ပါ။ အောက်ပါ Menu များမှ ရွေးချယ်နိုင်ပါသည်။", reply_markup=get_main_menu())
 
 async def button_click(update: Update, context):
@@ -33,6 +41,14 @@ async def button_click(update: Update, context):
             [InlineKeyboardButton("🔙 Back", callback_data='back')]
         ]
         await query.edit_message_text("👤 Admin ဆက်သွယ်ရန် လင့်ခ်များ:", reply_markup=InlineKeyboardMarkup(btns))
+
+    elif query.data == 'stats':
+        try:
+            with open('users.txt', 'r') as f:
+                user_count = len(f.readlines())
+            await query.edit_message_text(f"📊 လက်ရှိ Bot အသုံးပြုသူဦးရေ: {user_count} ယောက်", reply_markup=InlineKeyboardMarkup(back_btn))
+        except:
+            await query.edit_message_text("📊 လက်ရှိအသုံးပြုသူ မရှိသေးပါ။", reply_markup=InlineKeyboardMarkup(back_btn))
 
     elif query.data == 'fortune':
         with open('fortunes.txt', 'r', encoding='utf-8') as f:
@@ -66,7 +82,7 @@ async def button_click(update: Update, context):
         guides = {'calc_help': "🧮 /calc 10+5", 'short_help': "🔗 /short [link]", 'pass_help': "🔐 /pass [length]", 'qr_help': "🖼 /qr [text]"}
         await query.edit_message_text(guides.get(query.data, "လုပ်ဆောင်ချက်အသစ်"), reply_markup=InlineKeyboardMarkup(back_btn))
 
-# Command များ (အရင်အတိုင်း)
+# Command များ
 async def calc(update, context): 
     try: await update.message.reply_text(f"🧮 အဖြေ: {eval(''.join(context.args))}")
     except: await update.message.reply_text("အသုံးပြုပုံ: /calc 10+5")
@@ -97,4 +113,4 @@ if __name__ == '__main__':
     app_bot.add_handler(CallbackQueryHandler(button_click))
     print("Bot စတင်လည်ပတ်နေပါပြီ...")
     app_bot.run_polling()
-            
+        
