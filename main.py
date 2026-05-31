@@ -3,16 +3,17 @@ from datetime import datetime, timedelta
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler
 
-# Logging စနစ်
 logging.basicConfig(level=logging.INFO)
 
-# Main Menu ခလုတ်များ
+# Main Menu (Admin ခလုတ် - Facebook, Telegram, TikTok ပါဝင်)
 def get_main_menu():
     keyboard = [
         [InlineKeyboardButton("🌟 ရွှေဈေး", callback_data='gold'), InlineKeyboardButton("🇺🇸 ဒေါ်လာဈေး", callback_data='usd')],
         [InlineKeyboardButton("🧮 တွက်ချက်ရန်", callback_data='calc_help'), InlineKeyboardButton("🎲 အန်စာတုံး", callback_data='dice')],
         [InlineKeyboardButton("🔗 လင့်ခ်အတို", callback_data='short_help'), InlineKeyboardButton("🔐 Password", callback_data='pass_help')],
-        [InlineKeyboardButton("⏰ အချိန်/ရက်စွဲ", callback_data='info'), InlineKeyboardButton("🖼 QR Code", callback_data='qr_help')]
+        [InlineKeyboardButton("⏰ အချိန်/ရက်စွဲ", callback_data='info'), InlineKeyboardButton("🖼 QR Code", callback_data='qr_help')],
+        [InlineKeyboardButton("🔮 နေ့စဉ်ဗေဒင်", callback_data='fortune'), InlineKeyboardButton("🍎 ကျန်းမာရေး", callback_data='health')],
+        [InlineKeyboardButton("👤 Admin ဆက်သွယ်ရန်", callback_data='admin')]
     ]
     return InlineKeyboardMarkup(keyboard)
 
@@ -22,23 +23,34 @@ async def start(update: Update, context):
 async def button_click(update: Update, context):
     query = update.callback_query
     await query.answer()
-    
-    # ပြန်သွားရန် ခလုတ်
     back_btn = [[InlineKeyboardButton("🔙 Back", callback_data='back')]]
     
-    # မြန်မာစံတော်ချိန် (+6:30)
     mm_now = datetime.utcnow() + timedelta(hours=6, minutes=30)
     
-    # ရွှေဈေးနှင့် ဒေါ်လာဈေးအတွက် လင့်ခ်ပါသော ခလုတ်များ
-    if query.data == 'gold':
-        text = "🌟 ရွှေဈေး (၁ ကျပ်သား) = 5,800,000 MMK\n\nအသေးစိတ်ကြည့်ရန်:"
+    if query.data == 'admin':
+        btns = [
+            [InlineKeyboardButton("📘 Facebook", url='https://www.facebook.com/thetwei06?mibextid=ZbWKwL')],
+            [InlineKeyboardButton("✈️ Telegram", url='https://t.me/thetwei316')],
+            [InlineKeyboardButton("🎵 TikTok", url='https://www.tiktok.com/@thetwei318?_r=1&_t=ZS-96pFfIaVMGL')],
+            [InlineKeyboardButton("🔙 Back", callback_data='back')]
+        ]
+        await query.edit_message_text("👤 Admin ဆက်သွယ်ရန် လင့်ခ်များ:", reply_markup=InlineKeyboardMarkup(btns))
+
+    elif query.data == 'gold':
         btns = [[InlineKeyboardButton("🌐 ရွှေဈေးဝဘ်ဆိုဒ်", url='https://goldrate.com/my/gold/myanmar')], [InlineKeyboardButton("🔙 Back", callback_data='back')]]
-        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(btns))
+        await query.edit_message_text("🌟 ရွှေဈေး (၁ ကျပ်သား) = 5,800,000 MMK", reply_markup=InlineKeyboardMarkup(btns))
         
     elif query.data == 'usd':
-        text = "🇺🇸 ဒေါ်လာဈေး (၁ ဒေါ်လာ) = 4,850 MMK\n\nအသေးစိတ်ကြည့်ရန်:"
         btns = [[InlineKeyboardButton("🌐 ဗဟိုဘဏ် ငွေလဲနှုန်း", url='https://forex.cbm.gov.mm/index.php/fxrate')], [InlineKeyboardButton("🔙 Back", callback_data='back')]]
-        await query.edit_message_text(text, reply_markup=InlineKeyboardMarkup(btns))
+        await query.edit_message_text("🇺🇸 ဒေါ်လာဈေး (၁ ဒေါ်လာ) = 4,850 MMK", reply_markup=InlineKeyboardMarkup(btns))
+        
+    elif query.data == 'fortune':
+        fortunes = ["🔮 ဒီနေ့ အလုပ်ကိစ္စ အဆင်ပြေပါလိမ့်မယ်။", "🔮 ကံကောင်းခြင်းတွေ ဝင်ရောက်လာပါလိမ့်မယ်။", "🔮 မိတ်ဆွေကောင်းနဲ့ တွေ့ဆုံရတတ်ပါတယ်။", "🔮 အဖုအထစ်လေးတွေ ရှိပေမယ့် ကျော်လွှားနိုင်ပါမယ်။"]
+        await query.edit_message_text(random.choice(fortunes), reply_markup=InlineKeyboardMarkup(back_btn))
+        
+    elif query.data == 'health':
+        tips = "🍎 ကျန်းမာရေးအတွက် အကြံပြုချက်:\n၁။ တစ်နေ့လျှင် ရေ ၈ ခွက်သောက်ပါ။\n၂။ သစ်သီးဝလံ များများစားပါ။\n၃။ အိပ်ရေးဝအောင် အိပ်ပါ။"
+        await query.edit_message_text(tips, reply_markup=InlineKeyboardMarkup(back_btn))
         
     elif query.data == 'info': 
         await query.edit_message_text(f"🆔 သင့် ID: {query.from_user.id}\n📅 ရက်စွဲ: {mm_now.strftime('%Y-%m-%d')}\n⏰ အချိန်: {mm_now.strftime('%H:%M:%S')}", reply_markup=InlineKeyboardMarkup(back_btn))
@@ -48,15 +60,10 @@ async def button_click(update: Update, context):
     elif query.data == 'back': 
         await query.edit_message_text("👋 ဘာများကူညီပေးရမလဲ။", reply_markup=get_main_menu())
     else: 
-        guides = {
-            'calc_help': "🧮 တွက်ရန်: /calc 10+5",
-            'short_help': "🔗 လင့်ခ်အတို: /short [link]",
-            'pass_help': "🔐 Password: /pass [length]",
-            'qr_help': "🖼 QR Code: /qr [text]"
-        }
+        guides = {'calc_help': "🧮 /calc 10+5", 'short_help': "🔗 /short [link]", 'pass_help': "🔐 /pass [length]", 'qr_help': "🖼 /qr [text]"}
         await query.edit_message_text(guides.get(query.data, "လုပ်ဆောင်ချက်အသစ်"), reply_markup=InlineKeyboardMarkup(back_btn))
 
-# Command လုပ်ဆောင်ချက်များ
+# Command လုပ်ဆောင်ချက်များ (calc, short, pass_gen, qr_gen)
 async def calc(update, context): 
     try: await update.message.reply_text(f"🧮 အဖြေ: {eval(''.join(context.args))}")
     except: await update.message.reply_text("အသုံးပြုပုံ: /calc 10+5")
@@ -89,4 +96,4 @@ if __name__ == '__main__':
     
     print("Bot စတင်လည်ပတ်နေပါပြီ...")
     app_bot.run_polling()
-        
+    
