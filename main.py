@@ -1,73 +1,79 @@
-import os, random, qrcode, string, pyshorteners
-from flask import Flask
-from threading import Thread
+import os, random, qrcode, string, pyshorteners, logging
 from datetime import datetime
-from telegram import ReplyKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler
 
-app = Flask(__name__)
-@app.route('/')
-def home(): return "Bot is running 24/7!"
-def run_web(): app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 8080)))
+# Logging စနစ်
+logging.basicConfig(level=logging.INFO)
 
-# ဈေးနှုန်းများ
-GOLD = "5,800,000"
-USD = "4,850"
+# Main Menu ခလုတ်များဖွဲ့စည်းပုံ
+def get_main_menu():
+    keyboard = [
+        [InlineKeyboardButton("🌟 ရွှေဈေး", callback_data='gold'), InlineKeyboardButton("🇺🇸 ဒေါ်လာဈေး", callback_data='usd')],
+        [InlineKeyboardButton("🧮 တွက်ချက်ရန်", callback_data='calc_help'), InlineKeyboardButton("🎲 အန်စာတုံး", callback_data='dice')],
+        [InlineKeyboardButton("🔗 လင့်ခ်အတို", callback_data='short_help'), InlineKeyboardButton("🔐 Password", callback_data='pass_help')],
+        [InlineKeyboardButton("⏰ အချိန်/ID", callback_data='info'), InlineKeyboardButton("🖼 QR Code", callback_data='qr_help')]
+    ]
+    return InlineKeyboardMarkup(keyboard)
 
-# ခလုတ်များ (၁၂ ခု)
-def get_keyboard():
-    return ReplyKeyboardMarkup([
-        ['/start', '/help'],
-        ['/weather', '/time'],
-        ['/calc', '/qr'],
-        ['/rate_gold', '/rate_usd'],
-        ['/short', '/quote'],
-        ['/pass', '/dice', '/info']
-    ], resize_keyboard=True)
+# Start Command
+async def start(update: Update, context):
+    await update.message.reply_text("👋 မင်္ဂလာပါ! ကျွန်တော်က အများသုံး Helper Bot ပါ။ အောက်ပါ Menu များမှ ရွေးချယ်နိုင်ပါသည်။", reply_markup=get_main_menu())
 
-# Function များ
-async def start(update, context): await update.message.reply_text("မင်္ဂလာပါ! အောက်ပါခလုတ်များကို သုံးနိုင်ပါပြီ။", reply_markup=get_keyboard())
-async def get_time(update, context): await update.message.reply_text(f"⏰ အချိန်: {datetime.now().strftime('%H:%M:%S')}")
-async def rate_gold(update, context): await update.message.reply_text(f"🌟 ရွှေဈေး (1 ကျပ်သား) = {GOLD} MMK")
-async def rate_usd(update, context): await update.message.reply_text(f"🇺🇸 1 USD = {USD} MMK")
-async def roll_dice(update, context): await update.message.reply_dice()
-async def get_info(update, context): await update.message.reply_text(f"🆔 ID: {update.effective_user.id}")
-async def get_weather(update, context): await update.message.reply_text("🌡 ရန်ကုန်: 32°C")
-async def get_quote(update, context): await update.message.reply_text("💡: အရှုံးမပေးပါနဲ့!")
+# ခလုတ်နှိပ်သည့်အခါ လုပ်ဆောင်ချက်များ
+async def button_click(update: Update, context):
+    query = update.callback_query
+    await query.answer()
+    back_btn = [[InlineKeyboardButton("🔙 Back", callback_data='back')]]
+    
+    if query.data == 'gold': await query.edit_message_text("🌟 ရွှေဈေး (၁ ကျပ်သား) = 5,800,000 MMK", reply_markup=InlineKeyboardMarkup(back_btn))
+    elif query.data == 'usd': await query.edit_message_text("🇺🇸 ဒေါ်လာဈေး (၁ ဒေါ်လာ) = 4,850 MMK", reply_markup=InlineKeyboardMarkup(back_btn))
+    elif query.data == 'info': await query.edit_message_text(f"🆔 သင့် ID: {query.from_user.id}\n⏰ အချိန်: {datetime.now().strftime('%H:%M:%S')}", reply_markup=InlineKeyboardMarkup(back_btn))
+    elif query.data == 'dice': 
+        await context.bot.send_dice(chat_id=query.message.chat_id)
+        await query.edit_message_text("🎲 အန်စာတုံး လှိမ့်ပြီးပါပြီ!", reply_markup=InlineKeyboardMarkup(back_btn))
+    elif query.data == 'back': await query.edit_message_text("👋 ဘာများကူညီပေးရမလဲ။", reply_markup=get_main_menu())
+    else: 
+        help_guides = {
+            'calc_help': "🧮 တွက်ရန်: /calc 10+5",
+            'short_help': "🔗 လင့်ခ်: /short [link]",
+            'pass_help': "🔐 Password: /pass [length]",
+            'qr_help': "🖼 QR Code: /qr [text]"
+        }
+        await query.edit_message_text(help_guides.get(query.data, "လုပ်ဆောင်ချက်အသစ်"), reply_markup=InlineKeyboardMarkup(back_btn))
+
+# Command လုပ်ဆောင်ချက်များ
 async def calc(update, context): 
     try: await update.message.reply_text(f"🧮 အဖြေ: {eval(''.join(context.args))}")
     except: await update.message.reply_text("အသုံးပြုပုံ: /calc 10+5")
-async def shorten_link(update, context):
-    try: await update.message.reply_text(f"🔗: {pyshorteners.Shortener().tinyurl.short(context.args[0])}")
+
+async def short(update, context):
+    try: await update.message.reply_text(f"🔗 လင့်ခ်အတို: {pyshorteners.Shortener().tinyurl.short(context.args[0])}")
     except: await update.message.reply_text("အသုံးပြုပုံ: /short [link]")
-async def generate_qr(update, context):
+
+async def pass_gen(update, context):
+    length = int(context.args[0]) if context.args else 8
+    password = ''.join(random.choices(string.ascii_letters + string.digits, k=length))
+    await update.message.reply_text(f"🔐 Password: {password}")
+
+async def qr_gen(update, context):
     try:
         qrcode.make(''.join(context.args)).save('qr.png')
         await update.message.reply_photo(photo=open('qr.png', 'rb'))
     except: await update.message.reply_text("အသုံးပြုပုံ: /qr [စာသား]")
-async def gen_pass(update, context):
-    length = int(context.args[0]) if context.args else 8
-    await update.message.reply_text(f"🔐 Password: {''.join(random.choices(string.ascii_letters, k=length))}")
 
+# Bot စတင်ခြင်း
 if __name__ == '__main__':
-    Thread(target=run_web).start()
     TOKEN = "8829581045:AAFlpGC-6fPS0UTRZSbAz1ToPz4QusMxiOc"
     app_bot = ApplicationBuilder().token(TOKEN).build()
     
-    # ခလုတ်တိုင်းအတွက် Handler များ
     app_bot.add_handler(CommandHandler("start", start))
-    app_bot.add_handler(CommandHandler("help", start))
-    app_bot.add_handler(CommandHandler("time", get_time))
-    app_bot.add_handler(CommandHandler("rate_gold", rate_gold))
-    app_bot.add_handler(CommandHandler("rate_usd", rate_usd))
-    app_bot.add_handler(CommandHandler("dice", roll_dice))
-    app_bot.add_handler(CommandHandler("info", get_info))
-    app_bot.add_handler(CommandHandler("weather", get_weather))
-    app_bot.add_handler(CommandHandler("quote", get_quote))
     app_bot.add_handler(CommandHandler("calc", calc))
-    app_bot.add_handler(CommandHandler("short", shorten_link))
-    app_bot.add_handler(CommandHandler("qr", generate_qr))
-    app_bot.add_handler(CommandHandler("pass", gen_pass))
+    app_bot.add_handler(CommandHandler("short", short))
+    app_bot.add_handler(CommandHandler("pass", pass_gen))
+    app_bot.add_handler(CommandHandler("qr", qr_gen))
+    app_bot.add_handler(CallbackQueryHandler(button_click))
     
+    print("Bot စတင်လည်ပတ်နေပါပြီ...")
     app_bot.run_polling()
     
