@@ -1,11 +1,25 @@
-import random, qrcode, string, pyshorteners, logging, os
+import os
+import random, qrcode, string, pyshorteners, logging
 from datetime import datetime, timedelta
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler
+from flask import Flask
+from threading import Thread
 
+# --- Flask Web Server (Render/Railway အတွက်) ---
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot is running perfectly!"
+
+def run_web():
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
+
+# --- Bot Logic ---
 logging.basicConfig(level=logging.INFO)
 
-# Main Menu ခလုတ်များ
 def get_main_menu():
     keyboard = [
         [InlineKeyboardButton("🌟 ရွှေဈေး", callback_data='gold'), InlineKeyboardButton("🇺🇸 ဒေါ်လာဈေး", callback_data='usd')],
@@ -25,8 +39,7 @@ async def start(update: Update, context):
         content = f.read()
         if user_id not in content:
             f.write(user_id + "\n")
-            
-    await update.message.reply_text("👋 မင်္ဂလာပါ! ကျွန်တော်က အများသုံး Helper Bot ပါ။ အောက်ပါ Menu များမှ ရွေးချယ်နိုင်ပါသည်။", reply_markup=get_main_menu())
+    await update.message.reply_text("👋 မင်္ဂလာပါ! ကျွန်တော်က အများသုံး Helper Bot ပါ။", reply_markup=get_main_menu())
 
 async def button_click(update: Update, context):
     query = update.callback_query
@@ -40,7 +53,7 @@ async def button_click(update: Update, context):
             [InlineKeyboardButton("🎵 TikTok", url='https://www.tiktok.com/@thetwei318?_r=1&_t=ZS-96pFfIaVMGL')],
             [InlineKeyboardButton("🔙 Back", callback_data='back')]
         ]
-        await query.edit_message_text("👤 Admin ဆက်သွယ်ရန် လင့်ခ်များ:", reply_markup=InlineKeyboardMarkup(btns))
+        await query.edit_message_text("👤 Admin ဆက်သွယ်ရန်:", reply_markup=InlineKeyboardMarkup(btns))
 
     elif query.data == 'stats':
         try:
@@ -51,26 +64,30 @@ async def button_click(update: Update, context):
             await query.edit_message_text("📊 လက်ရှိအသုံးပြုသူ မရှိသေးပါ။", reply_markup=InlineKeyboardMarkup(back_btn))
 
     elif query.data == 'fortune':
-        with open('fortunes.txt', 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-            await query.edit_message_text(random.choice(lines).strip(), reply_markup=InlineKeyboardMarkup(back_btn))
+        try:
+            with open('fortunes.txt', 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                await query.edit_message_text(random.choice(lines).strip(), reply_markup=InlineKeyboardMarkup(back_btn))
+        except: await query.edit_message_text("ဗေဒင်ဖိုင် မတွေ့ရှိပါ။", reply_markup=InlineKeyboardMarkup(back_btn))
 
     elif query.data == 'health':
-        with open('health.txt', 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-            await query.edit_message_text(random.choice(lines).strip(), reply_markup=InlineKeyboardMarkup(back_btn))
+        try:
+            with open('health.txt', 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                await query.edit_message_text(random.choice(lines).strip(), reply_markup=InlineKeyboardMarkup(back_btn))
+        except: await query.edit_message_text("ကျန်းမာရေးဖိုင် မတွေ့ရှိပါ။", reply_markup=InlineKeyboardMarkup(back_btn))
 
     elif query.data == 'gold':
-        btns = [[InlineKeyboardButton("🌐 ရွှေဈေးဝဘ်ဆိုဒ်", url='https://goldrate.com/my/gold/myanmar')], [InlineKeyboardButton("🔙 Back", callback_data='back')]]
+        btns = [[InlineKeyboardButton("🌐 ရွှေဈေး", url='https://goldrate.com/my/gold/myanmar')], [InlineKeyboardButton("🔙 Back", callback_data='back')]]
         await query.edit_message_text("🌟 ရွှေဈေး (၁ ကျပ်သား) = 5,800,000 MMK", reply_markup=InlineKeyboardMarkup(btns))
         
     elif query.data == 'usd':
-        btns = [[InlineKeyboardButton("🌐 ဗဟိုဘဏ် ငွေလဲနှုန်း", url='https://forex.cbm.gov.mm/index.php/fxrate')], [InlineKeyboardButton("🔙 Back", callback_data='back')]]
+        btns = [[InlineKeyboardButton("🌐 ဗဟိုဘဏ်", url='https://forex.cbm.gov.mm/index.php/fxrate')], [InlineKeyboardButton("🔙 Back", callback_data='back')]]
         await query.edit_message_text("🇺🇸 ဒေါ်လာဈေး (၁ ဒေါ်လာ) = 4,850 MMK", reply_markup=InlineKeyboardMarkup(btns))
         
     elif query.data == 'info': 
         mm_now = datetime.utcnow() + timedelta(hours=6, minutes=30)
-        await query.edit_message_text(f"🆔 သင့် ID: {query.from_user.id}\n📅 ရက်စွဲ: {mm_now.strftime('%Y-%m-%d')}\n⏰ အချိန်: {mm_now.strftime('%H:%M:%S')}", reply_markup=InlineKeyboardMarkup(back_btn))
+        await query.edit_message_text(f"🆔 ID: {query.from_user.id}\n📅 ရက်စွဲ: {mm_now.strftime('%Y-%m-%d')}\n⏰ အချိန်: {mm_now.strftime('%H:%M:%S')}", reply_markup=InlineKeyboardMarkup(back_btn))
     
     elif query.data == 'dice': 
         await context.bot.send_dice(chat_id=query.message.chat_id)
@@ -82,7 +99,6 @@ async def button_click(update: Update, context):
         guides = {'calc_help': "🧮 /calc 10+5", 'short_help': "🔗 /short [link]", 'pass_help': "🔐 /pass [length]", 'qr_help': "🖼 /qr [text]"}
         await query.edit_message_text(guides.get(query.data, "လုပ်ဆောင်ချက်အသစ်"), reply_markup=InlineKeyboardMarkup(back_btn))
 
-# Command များ
 async def calc(update, context): 
     try: await update.message.reply_text(f"🧮 အဖြေ: {eval(''.join(context.args))}")
     except: await update.message.reply_text("အသုံးပြုပုံ: /calc 10+5")
@@ -103,6 +119,11 @@ async def qr_gen(update, context):
     except: await update.message.reply_text("အသုံးပြုပုံ: /qr [စာသား]")
 
 if __name__ == '__main__':
+    # 1. Web Server ကို အရင် Run ပါ
+    t = Thread(target=run_web)
+    t.start()
+    
+    # 2. Bot ကို စတင်ပါ
     TOKEN = "8979386653:AAGSvR5bYIzixafDXsmVNFVZ93uNa0o-xRs"
     app_bot = ApplicationBuilder().token(TOKEN).build()
     app_bot.add_handler(CommandHandler("start", start))
@@ -113,4 +134,4 @@ if __name__ == '__main__':
     app_bot.add_handler(CallbackQueryHandler(button_click))
     print("Bot စတင်လည်ပတ်နေပါပြီ...")
     app_bot.run_polling()
-        
+    
